@@ -7,6 +7,7 @@ import { faker } from '@faker-js/faker';
 import dayjs from 'dayjs';
 import Cryptr from "cryptr";
 import bcrypt from "bcrypt";
+import { insertRecharge } from '../repositories/rechargeRepository';
 
 const cryptr = new Cryptr('myTotallySecretKey');
 
@@ -135,7 +136,7 @@ function authenticatePassword(password: string, encryptedPassword: string) {
     if(!comparePassword){
       throw { code: 'Unauthorized' }
     }
-  }
+}
 
 export async function  unlockCardService(id: number, password: string){
     
@@ -167,6 +168,7 @@ function encryptPassword(password: string) {
     const encryptedPassword = bcrypt.hashSync(password, 10);
     return encryptedPassword;
 }
+
 function verifyCVC(cvc: string, encryptedCVC: string) {
     
     const decryptedCVC: string = cryptr.decrypt(encryptedCVC);
@@ -175,7 +177,7 @@ function verifyCVC(cvc: string, encryptedCVC: string) {
       throw  { code: 'BadRequest' }
     }
     return false;
-  }
+}
 
 export async function activateCardService(id: number, cvc: string, password: string ){
   
@@ -195,8 +197,26 @@ export async function activateCardService(id: number, cvc: string, password: str
   
     await update(id, {password: encryptedPassword});
 
-  }
+}
 
-export async function recharge(id: number){
+function verifyCardActive(password){
 
+    if (!password) {
+        throw { 
+          code: 'BadRequest'
+        }
+    }
+}
+
+export async function rechargeService(id: number, amount: number, apiKey: string){
+
+    await verifyApiKey(apiKey);
+    
+    const card = await verifyCardExistent(id);
+    
+    verifyCardActive(card.password);
+    
+    await verifyValidateDateCard(card.expirationDate);
+
+    await insertRecharge({cardId: card.id, amount})
 }

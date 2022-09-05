@@ -1,5 +1,5 @@
 import { Response, Request } from "express";
-import { activateCardService, blockCardService, creatCardCard, unlockCardService } from "../services/cardService";
+import { activateCardService, blockCardService, creatCardCard, rechargeService, unlockCardService } from "../services/cardService";
 
 
 export async function creatCard(req: Request, res: Response) {
@@ -43,5 +43,12 @@ export async function blockCard(req: Request, res: Response) {
 }
 
 export async function recharge(req: Request, res: Response) {
+    const apikey =res.locals.apiKey;
+    const { amount } = req.body;
+    const cardId = Number(req.params.id);
+
+    rechargeService(cardId, amount, apikey);
+
+    res.sendStatus(200);
     
 }
