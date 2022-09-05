@@ -71,7 +71,6 @@ export async function creatCardCard(apiKey: string, type: TransactionTypes, empl
     
     const cardCVV :string = faker.finance.creditCardCVV();
     const encryptedCVV = cryptr.encrypt(cardCVV);
-    // cryptr.decrypt(encryptedString); para desencriptografa
 
     const dataExpirion = dayjs().add(5, 'year').format("MM/YY");
 
@@ -162,4 +161,42 @@ export async function  blockCardService(id: number, password: string){
     authenticatePassword(password, card.password);
     
     await update(id, {isBlocked: true});
+}
+
+function encryptPassword(password: string) {
+    const encryptedPassword = bcrypt.hashSync(password, 10);
+    return encryptedPassword;
+}
+function verifyCVC(cvc: string, encryptedCVC: string) {
+    
+    const decryptedCVC: string = cryptr.decrypt(encryptedCVC);
+
+    if (!(cvc === decryptedCVC)) {
+      throw  { code: 'BadRequest' }
+    }
+    return false;
+  }
+
+export async function activateCardService(id: number, cvc: string, password: string ){
+  
+    const card = await verifyCardExistent(id);
+  
+    await verifyValidateDateCard(card.expirationDate);
+  
+    if (card.password) {
+      throw { 
+        code: 'Conflict'
+      }
+    }
+  
+    verifyCVC(cvc, card.securityCode);
+  
+    const encryptedPassword = encryptPassword(password);
+  
+    await update(id, {password: encryptedPassword});
+
+  }
+
+export async function recharge(id: number){
+
 }
