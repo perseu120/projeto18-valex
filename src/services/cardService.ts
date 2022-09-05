@@ -1,10 +1,12 @@
-import { TransactionTypes, Card, CardInsertData, insert } from './../repositories/cardRepository';
+import { TransactionTypes, Card, CardInsertData, insert, update } from './../repositories/cardRepository';
 import { findByTypeAndEmployeeId } from "../repositories/cardRepository";
 import { findByApiKey } from "../repositories/companyRepository";
 import { findById } from "../repositories/employeeRepository";
+import  findByIdCard  from './../repositories/cardRepository';
 import { faker } from '@faker-js/faker';
 import dayjs from 'dayjs';
 import Cryptr from "cryptr";
+import bcrypt from "bcrypt";
 
 const cryptr = new Cryptr('myTotallySecretKey');
 
@@ -92,4 +94,72 @@ export async function creatCardCard(apiKey: string, type: TransactionTypes, empl
 
     await insert(Card);
 
+}
+
+export async function verifyCardExistent(id){
+    const card = findByIdCard(id)
+    
+    if(!card){
+        throw {code: "NotFound"}
+    }
+
+    return card;
+}
+
+export async function verifyValidateDateCard(expirationDate){
+    const dateDifference = dayjs(expirationDate).diff(dayjs().format('MM/YY'),'month', true);
+
+    if (dateDifference < 0) {
+        throw  { code: 'Expired'}
+    }
+    
+    return false;
+}
+
+function verifyIfUnlocked(isBlocked: boolean) {
+    if (!isBlocked) {
+      throw { 
+        code: 'Conflict'
+      }
+    }
+}
+function verifyIfBlocked(isBlocked: boolean) {
+    if (isBlocked) {
+      throw { 
+        code: 'Conflict'
+      }
+    }
+}
+
+function authenticatePassword(password: string, encryptedPassword: string) {
+    const comparePassword = bcrypt.compareSync(password, encryptedPassword);
+    if(!comparePassword){
+      throw { code: 'Unauthorized' }
+    }
+  }
+
+export async function  unlockCardService(id: number, password: string){
+    
+    const card = await verifyCardExistent(id);
+    
+    await verifyValidateDateCard(card.expirationDate);
+   
+    verifyIfUnlocked(card.isBlocked);
+    
+    authenticatePassword(password, card.password);
+    
+    await update(id, {isBlocked: false});
+}
+
+export async function  blockCardService(id: number, password: string){
+    
+    const card = await verifyCardExistent(id);
+    
+    await verifyValidateDateCard(card.expirationDate);
+   
+    verifyIfBlocked(card.isBlocked);
+    
+    authenticatePassword(password, card.password);
+    
+    await update(id, {isBlocked: true});
 }
